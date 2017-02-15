@@ -1,6 +1,23 @@
 local GPS_TIMEOUT = 5
 local abs_x, abs_y, abs_z = gps.locate(GPS_TIMEOUT)
 
+--[[
+  For now end is marked with no block below the robot,
+  will change to detecting colored wool or something later.
+]]--
+local function IsEnd()
+  --[[
+    local success, data = turtle.inspectDown()
+    if success then
+      if data.name = "minecraft:wool or some shit" then return true end
+      -- data.metadata is another thing we can use maybe
+    end
+
+    return false
+  ]]--
+  return not turtle.detectDown()
+end
+
 function FindEnd(x, y, z, length, width)
   local ITERATION_MAX = 10000
   local end_found = false
@@ -25,22 +42,5 @@ function FindEnd(x, y, z, length, width)
     i = i + 1
   end
 
-  return (end_found, end_x, end_y, end_z)
-end
-
---[[
-  For now end is marked with no block below the robot,
-  will change to detecting colored wool or something later.
-]]--
-local function IsEnd()
-  --[[
-    local success, data = turtle.inspectDown()
-    if success then
-      if data.name = "minecraft:wool or some shit" then return true end
-      -- data.metadata is another thing we can use maybe
-    end
-
-    return false
-  ]]--
-  return not turtle.detectDown()
+  return end_found, end_x, end_y, end_z
 end
