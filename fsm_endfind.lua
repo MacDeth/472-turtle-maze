@@ -6,16 +6,13 @@ local abs_x, abs_y, abs_z = gps.locate(GPS_TIMEOUT)
   will change to detecting colored wool or something later.
 ]]--
 local function IsEnd()
-  --[[
-    local success, data = turtle.inspectDown()
-    if success then
-      if data.name = "minecraft:wool or some shit" then return true end
-      -- data.metadata is another thing we can use maybe
-    end
 
-    return false
-  ]]--
-  return not turtle.detectDown()
+  local success, data = turtle.inspectDown()
+  if success then
+    if data.metadata == 14 then return true end
+  end
+
+  return false
 end
 
 function FindEnd(x, y, z, length, width)
@@ -44,3 +41,5 @@ function FindEnd(x, y, z, length, width)
 
   return end_found, end_x, end_y, end_z
 end
+
+-- print(FindEnd(0,0,0,0,0))
