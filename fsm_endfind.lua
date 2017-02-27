@@ -1,10 +1,7 @@
 local GPS_TIMEOUT = 5
 local abs_x, abs_y, abs_z = gps.locate(GPS_TIMEOUT)
 
---[[
-  For now end is marked with no block below the robot,
-  will change to detecting colored wool or something later.
-]]--
+
 local function IsEnd()
 
   local success, data = turtle.inspectDown()
@@ -31,8 +28,15 @@ function FindEnd(x, y, z, length, width)
 
     -- State: Turn to Opening
     turtle.turnLeft()
-    while turtle.detect() do -- State: Observe
+    -- State: Observe
+    while turtle.detect() do
+      --[[
+        Map the block on array map:
+
+      ]]--
+      -- State: Turn to Opening
       turtle.turnRight()
+      -- State: Observe
     end
     -- State: Move
     turtle.forward()
