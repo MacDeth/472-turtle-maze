@@ -22,8 +22,9 @@ function fillMatrix()
         end
     end
 end
+
 function adjacencyMatrix()
-    for i=1, N-1 do
+	for i=1, N-1 do
         for j=1, M-1 do
             currValue = maze[i][j]
             if currValue ~= 0 then
@@ -44,8 +45,39 @@ function adjacencyMatrix()
     end
 end
 
+function Djikstra()
+
+	--Initialize
+	Q = {}
+	dist = {}
+	prev = {}
+
+	for v=1, numNodes do
+		if v ~= source then
+			dist[v] = math.huge
+			prev[v] = 1 --Each Square has equal distance of 1.
+			table.insert(Q, v) --Add v to set Q
+		end
+	end
+
+	dist[source] = 0
+
+	while(getn(visited) > 0) --Iterate While Q not Empty
+		for(u=1, numNodes) do --Iterate through set
+			Q[u] = nil; --Remove u from set Q
+			for(v=1, numNodes) do
+				if [u][v] = 1 then --For Each Neighbor
+					
+			end
+		end
+	end
+end
+
 fillMatrix()
 adjacencyMatrix()
+dikstraSearch()
+
+
 
 print("Original Maze:")
 for i=1, N do
