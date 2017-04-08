@@ -236,7 +236,7 @@ for i=1, length do
       if i%2 == 1 and j%2 == 0 then
         gridMap[i][j] = cellGrid[(i-1)/2][j/2]["r"]
       else
-        gridMap[i][j] = cellGrid[(i/2)][(j-1)/2]["u"]
+        gridMap[i][j] = cellGrid[(i/2)][(j-1)/2]["d"]
       end
     end
 
