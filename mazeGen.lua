@@ -2,13 +2,32 @@
 --1 = wall, 0 = open
 --length should be odd
 
-length = 15
+inventorySpot = 1;
+
+print("Width?")
+length = io.read()
 map = {} --final grid
 
 cellGrid = {}
 gridLen = (length-1)/2
 
 unvisited = {}
+
+
+function placeBlock()
+  foundInv = turtle.getItemCount(inventorySpot) ~= 0
+  while foundInv == false do
+    inventorySpot = inventorySpot + 1
+    if inventorySpot > 16 then
+      inventorySpot = 1
+    end
+    
+    foundInv = turtle.getItemCount(inventorySpot) ~= 0
+  end
+
+  turtle.select(inventorySpot)
+  turtle.place()
+end
 
 for i=1, gridLen do
   cellGrid[i] = {}
@@ -212,14 +231,6 @@ while generating == 1 do
   end
 end
 
-for i = 1, gridLen do
-  x = ""
-  for j = 1, gridLen do
-    x= x .. " " .. cellGrid[i][j]['l'] .. cellGrid[i][j]['d'] .. cellGrid[i][j]['r'] .. cellGrid[i][j]['u']
-  end
-  --print(x)
-end
-
 gridMap = {}
 for i=1, length do
   gridMap[i] = {}
@@ -243,4 +254,33 @@ for i=1, length do
     x = x .. gridMap[i][j]
   end
   print(x)
+end
+
+for i = 1, length,2 do
+  
+  for j = 1, length do
+    turtle.back()
+    if gridMap[i][j] == 1 then
+      placeBlock();
+    end
+  end
+  
+  turtle.turnLeft() 
+  turtle.back()
+  turtle.turnLeft()
+  turtle.back()
+  
+  for j = length, 1, -1 do
+    turtle.back()
+    if gridMap[i+1][j] == 1 then
+      placeBlock();
+    end
+
+  end
+  
+  turtle.turnRight()
+  turtle.back()
+  turtle.turnRight()
+  turtle.back()
+  
 end
