@@ -1,5 +1,5 @@
 --Creates shortest path 
-function findShortestPath(table maze, int N, int M)  
+function FindShortestPath(table maze, int N, int M)  
 	
 	print2DMaze(maze);
 	mt = adjacencyMatrix(maze, N, M)

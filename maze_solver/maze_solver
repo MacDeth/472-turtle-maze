@@ -1,10 +1,58 @@
+local orientation = 0 --0 = -x, 1 = -z, 2 = +x, 3 = +z
+--In Array, Treat down as +z and right as +x. Dir assumes we start looking towards -x.
+
+-- Variables --
+arg = {...} -- Lua Command Line arguments
+string rednet = ""
+table maze = {}
+table shortest_path = {}
+
+int current_x = 0
+int current_z = 0 -- We don't care about y in the orientation of this game
+int orientation = 0
+
 -- Load API's --
 os.loadAPI("tuple")
 os.loadAPI("search_dijkstra")
 os.loadAPI("fsm_endfind")
-function main () 
-		if state == STARTING 	then
-			state = END_FIND
-			fsm_endfind.FindEnd
-		end
+
+-- Main Function --
+function main()
+		-- Receive Argument Which states which Rednet Computer to Send To. --
+		rednet = arg[1]
+		
+		-- Start FSM Machine which Searches for Goal Block via Left Hand Rule --
+		-- Retrieve Maze from End Finder 
+		maze = fsm_endfind.FindEnd()
+		
+		--Perform Dijkstra Search on that maze and return the Shortest Path Known --
+		shortest_path = search_dijkstra.FindShortestPath(maze, )
 end
+
+
+-- Turning Helper Functions --
+function turnLeft()
+	turtle.turnLeft();
+	orientation = (orientation - 1) % 4;
+end
+ 
+function turnRight()
+	turtle.turnRight();
+	orientation = (orientation + 1) % 4;
+end
+
+function forward()
+	turtle.forward()
+	if orientation == 0 then
+		current_x = current_x - 1
+	elseif orientation == 1 then
+		current_z = current_z - 1
+	elseif orientation == 2 then
+		current_x = current_x + 1
+	elseif orientation == 3 then
+		current_z = current_z + 1
+	end
+end
+
+-- Start Main Function --
+main()
