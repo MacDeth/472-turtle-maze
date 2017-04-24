@@ -7,8 +7,19 @@ string rednet = ""
 table maze = {}
 table shortest_path = {}
 
+-- Turtle's Current Position --
 int current_x = 0
 int current_z = 0 -- We don't care about y in the orientation of this game
+
+-- Top Left Corner of Maze --
+int min_x = 0;
+int min_z = 0;
+
+-- Bottom Right Corner of Maze --
+int max_x = 0;
+int max_z = 0;  
+
+-- Turtle's Relative Orientation --
 int orientation = 0
 
 -- Load API's --
@@ -23,10 +34,14 @@ function main()
 		
 		-- Start FSM Machine which Searches for Goal Block via Left Hand Rule --
 		-- Retrieve Maze from End Finder 
-		maze = fsm_endfind.FindEnd()
+		found = fsm_endfind.FindEnd()
 		
-		--Perform Dijkstra Search on that maze and return the Shortest Path Known --
-		shortest_path = search_dijkstra.FindShortestPath(maze, )
+		if found then
+			--Perform Dijkstra Search on that maze and return the Shortest Path Known --
+			shortest_path = search_dijkstra.FindShortestPath(maze)
+		else
+			print("Robot Could not Find End, Exiting...")
+		end
 end
 
 
@@ -43,13 +58,13 @@ end
 
 function forward()
 	turtle.forward()
-	if orientation == 0 then
+	if orientation == 0 then -- -x orientation
 		current_x = current_x - 1
-	elseif orientation == 1 then
+	elseif orientation == 1 then -- -z orientation
 		current_z = current_z - 1
-	elseif orientation == 2 then
+	elseif orientation == 2 then -- +x orientation
 		current_x = current_x + 1
-	elseif orientation == 3 then
+	elseif orientation == 3 then -- +z orientation
 		current_z = current_z + 1
 	end
 end
