@@ -1,0 +1,10 @@
+-- Load API's --
+os.loadAPI("tuple")
+os.loadAPI("search_dijkstra")
+os.loadAPI("fsm_endfind")
+function main () 
+		if state == STARTING 	then
+			state = END_FIND
+			fsm_endfind.FindEnd
+		end
+end
