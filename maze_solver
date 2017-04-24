@@ -2,8 +2,6 @@
 arg = {...} -- Lua Command Line arguments
 rednet = ""
 maze = {}
-mt = {}
-shortest_path = {}
 
 -- Turtle's Current Position --
 current_x = 0
@@ -17,11 +15,21 @@ min_z = 0;
 max_x = 0;
 max_z = 0;  
 
+end_x = 0
+end_z = 0
+
 -- Turtle's Relative Orientation --
 orientation = 0 --0 = -x, 1 = -z, 2 = +x, 3 = +z
 
 -- Dijkstra Variables --
+mt = {}
+shortest_path = {}
+path_length = 1 --Always 1 even if starting node
+dist = {} -- Distances
+prev = {} -- 'Previous' of each node
 numNodes = 0 --Number of Nodes Generated
+source = 0
+target = 0
 
 -- Main Function --
 function main()
@@ -113,6 +121,7 @@ function FindEnd()
 		
 		if IsEnd() then
 			-- State: End Found
+			end_x, end_z = current_x, current_z;
 			end_found = true
 			break
 		end
@@ -182,24 +191,30 @@ function FindShortestPath()
 	adjacencyMatrix()
 	printAdjacencyMatrix()
 	
-	Djikstra(mt);
+	Djikstra()
 	
-	S = {}
 	u = target
 
 	--Construct Path To Goal
 	while prev[u] ~= nil do
-		table.insert(S, 1, u)
+		path_length = path_length + 1;
+		table.insert(shortest_path, 1, u)
 		u = prev[u]
 	end
-	table.insert(S, 1, u) --Get final Num
+	table.insert(shortest_path, 1, u) --Get final Num
 	
-	printShortestPath(S)
-	
-	return S --Shortest Path
+	printShortestPath()
 end
 
 function adjacencyMatrix()
+	
+	-- Fill matrix with defaults --
+    for i=1, numNodes do
+		mt[i] = {} -- create a new row
+		for j=1,numNodes do
+			mt[i][j] = 0
+		end
+    end
 	
 	for i=min_x, max_x-1 do
 		for j=min_z, max_z-1 do
@@ -207,16 +222,13 @@ function adjacencyMatrix()
 			if currValue ~= 0 then
 				--Determine if Node Adjacent East of Current
 				eastValue = maze[i+1][j]
-				print(currValue);
 				if eastValue ~= 0 then
-					print(eastValue);
 					mt[currValue][eastValue] = 1
 					mt[eastValue][currValue] = 1
 				end
 				--Determine if Node Adjacent South of Current
 				southValue = maze[i][j+1]
 				if southValue ~= 0 then
-					print(southValue);
                     mt[currValue][southValue] = 1
                     mt[southValue][currValue] = 1
                 end
@@ -225,14 +237,15 @@ function adjacencyMatrix()
     end
 end
 
-function Djikstra(mt)
+function Djikstra()
 
 	--Initialization
 	Q = {}
 	Qsize = 0
 	dist = {}
 	prev = {}
-
+	source = maze[0][0]
+	target = maze[end_x][end_z]
 	for v=1, numNodes do
 			dist[v] = math.huge --Unknown Distance from source to v
 			prev[v] = nil --Previous node in optimal path from source
@@ -260,6 +273,7 @@ function Djikstra(mt)
 		Qsize = Qsize - 1
 
 		if (u == target) then
+			print("Dijkstra Found Goal Node");
 			break
 		end
 
@@ -269,6 +283,7 @@ function Djikstra(mt)
 				if alt < dist[v] then
 					dist[v] = alt
 					prev[v] = u
+					print(prev[v])
 				end
 			end
 		end
@@ -279,28 +294,32 @@ function print2DMaze()
 	print("Original Maze:")
 	for i=min_x, max_x do
 	   for j=min_z, max_z do
-		   io.write(string.format("%1d", maze[i][j]))
+			if maze[i][j] > 0 then
+				io.write("0")
+			else
+				io.write("1")
+			end
 	   end
 	   print()
 	end
 end
 
-function printAdjacencyMatrix(mt)
+function printAdjacencyMatrix()
 	print("\nAdjacency Matrix:")
 	for i=1, numNodes-1 do
 	   for j=1, numNodes-1 do
-		   io.write(string.format("%2d", mt[i][j]))
+		   io.write(mt[i][j])
 	   end
 	   print()
 	end
 end
 
-function printShortestPath(S)
+function printShortestPath()
 	print("\nDjikstra Path:")
 	--Print Path
-	for i = 1, #S do
-		io.write(S[i])
-		if i ~= #S then
+	for i = 1, path_length do
+		io.write(shortest_path[i])
+		if i ~= path_length then
 			io.write("->")
 		end
 	end
