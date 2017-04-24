@@ -24,7 +24,7 @@ orientation = 0 --0 = -x, 1 = -z, 2 = +x, 3 = +z
 -- Dijkstra Variables --
 mt = {}
 shortest_path = {}
-path_length = 1 --Always 1 even if starting node
+path_length = 1 --Always start 1 even if starting node
 dist = {} -- Distances
 prev = {} -- 'Previous' of each node
 numNodes = 0 --Number of Nodes Generated
@@ -40,7 +40,7 @@ function main()
 		-- Retrieve Maze from End Finder 
 		found = FindEnd()
 		
-		--Fill In Gaps on Maze
+		-- Fill In Gaps on Maze --
 		for i=min_x, max_x do
 			for j=min_z, max_z do
 				if maze[i] == nil then
@@ -55,10 +55,13 @@ function main()
 		
 		if found then
 			--Perform Dijkstra Search on that maze and return the Shortest Path Known --
-			shortest_path = FindShortestPath()
+			FindShortestPath()
 		else
 			print("Robot Could not Find End, Exiting...")
 		end
+		
+		-- Perform FSM Traversal back to start and then backtrace to goal
+		DoTraversal()
 end
 
 -- Turning Helper Functions --
@@ -98,6 +101,33 @@ function forward()
 	print(current_x, current_z)
 end
 
+function MapWall()
+	if orientation == 0 then -- -x orientation
+		insert((current_x - 1), (current_z), 0)
+		if current_x -1 < min_x then 
+			min_x = current_x - 1
+		end
+	elseif orientation == 1 then -- -z orientation
+		insert((current_x), (current_z - 1), 0)
+		--maze[current_x][current_z - 1] = 1
+		if current_z - 1 < min_z then 
+			min_z = current_z - 1
+		end
+	elseif orientation == 2 then
+		insert((current_x + 1), (current_z), 0)
+		--maze[current_x +1][current_z] = 1 -- +x orientation
+		if current_x + 1 > max_x then 
+			max_x = current_x + 1
+		end
+	elseif orientation == 3 then
+		insert((current_x), (current_z + 1), 0)
+		--maze[current_x][current_z + 1] = 1 -- +z orientation
+		if current_z + 1 > max_z then 
+			max_z = current_z + 1
+		end
+	end
+end
+
 ------------------------------
 -- FSM End Finder Functions --
 ------------------------------
@@ -129,35 +159,12 @@ function FindEnd()
 		-- State: Turn to Opening
 		turnLeft()
 		-- State: Observe
-		--insert(current_x, current_z, numNodes + 1)
-		--numNodes = numNodes + 1
+		insert(current_x, current_z, numNodes + 1)
+		numNodes = numNodes + 1
 		
 		while turtle.detect() do
 			 -- Map the block on array map --
-			if orientation == 0 then -- -x orientation
-				insert((current_x - 1), (current_z), 0)
-				if current_x -1 < min_x then 
-					min_x = current_x - 1
-				end
-			elseif orientation == 1 then -- -z orientation
-				insert((current_x), (current_z - 1), 0)
-				--maze[current_x][current_z - 1] = 1
-				if current_z - 1 < min_z then 
-					min_z = current_z - 1
-				end
-			elseif orientation == 2 then
-				insert((current_x + 1), (current_z), 0)
-				--maze[current_x +1][current_z] = 1 -- +x orientation
-				if current_x + 1 > max_x then 
-					max_x = current_x + 1
-				end
-			elseif orientation == 3 then
-				insert((current_x), (current_z + 1), 0)
-				--maze[current_x][current_z + 1] = 1 -- +z orientation
-				if current_z + 1 > max_z then 
-					max_z = current_z + 1
-				end
-			end
+			MapWall()
 			  
 			  -- State: Turn to Opening
 			  turnRight()
@@ -321,6 +328,100 @@ function printShortestPath()
 		io.write(shortest_path[i])
 		if i ~= path_length then
 			io.write("->")
+		end
+	end
+end
+
+----------------------------
+-- Do Traversal Functions --
+----------------------------
+function DoTraversal()
+	--Move Back To Starting Location First
+	local recalc = BackToStart()
+	while recalc do
+		FindShortestPath()
+		recalc = BackToStart()
+	end
+	-- Perform Traversal Other Way After Corrections Are Made on Way back --
+	recalc = StartToEnd()
+	while recalc do
+		FindShortestPath()
+		recalc = StartToEnd()
+	end
+	print("We Made it! WOO!")
+	shell.run("dance")
+end
+
+function BackToStart()
+    -- follow known path(option 1) --
+	local steps = path_length-1
+	local recalc = false
+	
+	while steps > 0 and not recalc do
+		local node = shortest_path[steps]
+		
+		if node == maze[current_x-1][current_z] then -- -x orientation
+			TurnTo(0) --Turns to 0 Direction in least steps possible
+		elseif node == maze[current_x][current_z-1] then -- -z orientation
+			TurnTo(1)
+		elseif node == maze[current_x+1][current_z] then -- +x orientation
+			TurnTo(2)
+		elseif node == maze[current_x][current_z+1] then -- +z orientation
+			TurnTo(3)
+		else
+			print("Back To Start: Our Dijkstra Algorithm is a Liar, Exiting...");
+			break
+		end
+		
+		if turtle.detect() then
+			recalc = true
+		else
+			forward()
+		end
+		steps = steps - 1;
+	end
+	
+	return recalc;
+end
+
+function StartToEnd()
+    -- follow known path(option 1) --
+	local steps = path_length-1
+	local recalc = false
+	
+	for i=2, path_length do
+		local node = shortest_path[i]
+		
+		if node == maze[current_x-1][current_z] then -- -x orientation
+			TurnTo(0) --Turns to 0 Direction in least steps possible
+		elseif node == maze[current_x][current_z-1] then -- -z orientation
+			TurnTo(1)
+		elseif node == maze[current_x+1][current_z] then -- +x orientation
+			TurnTo(2)
+		elseif node == maze[current_x][current_z+1] then -- +z orientation
+			TurnTo(3)
+		else
+			print("Start To End: Our Dijkstra Algorithm is a Liar, Exiting...");
+			break
+		end
+		
+		if turtle.detect() then
+			recalc = true
+		else
+			forward()
+		end
+		steps = steps - 1;
+	end
+	
+	return recalc;
+end
+
+function TurnTo(direction)
+	while direction ~= orientation do
+		if direction - orientation > 0 then
+			turnRight()
+		else
+			turnLeft()
 		end
 	end
 end
