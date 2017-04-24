@@ -2,6 +2,7 @@
 arg = {...} -- Lua Command Line arguments
 rednet = ""
 maze = {}
+mt = {}
 shortest_path = {}
 
 -- Turtle's Current Position --
@@ -18,7 +19,9 @@ max_z = 0;
 
 -- Turtle's Relative Orientation --
 orientation = 0 --0 = -x, 1 = -z, 2 = +x, 3 = +z
---In Array, Treat down as +z and right as +x. Dir assumes we start looking towards -x.
+
+-- Dijkstra Variables --
+numNodes = 0 --Number of Nodes Generated
 
 -- Main Function --
 function main()
@@ -32,15 +35,19 @@ function main()
 		--Fill In Gaps on Maze
 		for i=min_x, max_x do
 			for j=min_z, max_z do
+				if maze[i] == nil then
+					maze[i] = {}
+				end
 				if maze[i][j] == nil then 
-					maze[i][j] = 0;
+					insert(i, j, numNodes + 1)
+					numNodes = numNodes + 1;
 				end
 			end
 		end
 		
 		if found then
 			--Perform Dijkstra Search on that maze and return the Shortest Path Known --
-			shortest_path = FindShortestPath(maze)
+			shortest_path = FindShortestPath()
 		else
 			print("Robot Could not Find End, Exiting...")
 		end
@@ -61,12 +68,24 @@ function forward()
 	turtle.forward()
 	if orientation == 0 then -- -x orientation
 		current_x = current_x - 1
+		if current_x < min_x then 
+			min_x = current_x
+		end
 	elseif orientation == 1 then -- -z orientation
 		current_z = current_z - 1
+		if current_z < min_z then 
+			min_z = current_z
+		end
 	elseif orientation == 2 then -- +x orientation
 		current_x = current_x + 1
+		if current_x > max_x then 
+			max_x = current_x
+		end
 	elseif orientation == 3 then -- +z orientation
 		current_z = current_z + 1
+		if current_z > max_z then 
+			max_z = current_z
+		end
 	end
 	print(current_x, current_z)
 end
@@ -101,27 +120,30 @@ function FindEnd()
 		-- State: Turn to Opening
 		turnLeft()
 		-- State: Observe
+		--insert(current_x, current_z, numNodes + 1)
+		--numNodes = numNodes + 1
+		
 		while turtle.detect() do
 			 -- Map the block on array map --
 			if orientation == 0 then -- -x orientation
-				insert((current_x - 1), (current_z))
+				insert((current_x - 1), (current_z), 0)
 				if current_x -1 < min_x then 
 					min_x = current_x - 1
 				end
 			elseif orientation == 1 then -- -z orientation
-				insert((current_x), (current_z - 1))
+				insert((current_x), (current_z - 1), 0)
 				--maze[current_x][current_z - 1] = 1
 				if current_z - 1 < min_z then 
 					min_z = current_z - 1
 				end
 			elseif orientation == 2 then
-				insert((current_x + 1), (current_z))
+				insert((current_x + 1), (current_z), 0)
 				--maze[current_x +1][current_z] = 1 -- +x orientation
 				if current_x + 1 > max_x then 
 					max_x = current_x + 1
 				end
 			elseif orientation == 3 then
-				insert((current_x), (current_z + 1))
+				insert((current_x), (current_z + 1), 0)
 				--maze[current_x][current_z + 1] = 1 -- +z orientation
 				if current_z + 1 > max_z then 
 					max_z = current_z + 1
@@ -140,11 +162,11 @@ function FindEnd()
   return end_found
 end
 
-function insert(x, z)
+function insert(x, z, val)
 	if not maze[x] then
 		maze[x] = {}
 	end
-	maze[x][z] = 1
+	maze[x][z] = val
 end
 
 
@@ -153,11 +175,12 @@ end
 ------------------------------------
 
 --Creates shortest path 
-function FindShortestPath(maze, N, M)  
+function FindShortestPath()  
 	
-	print2DMaze(maze)
-	mt = adjacencyMatrix(maze, N, M)
-	printAdjacencyMatrix(mt)
+	print2DMaze()
+	
+	adjacencyMatrix()
+	printAdjacencyMatrix()
 	
 	Djikstra(mt);
 	
@@ -176,28 +199,30 @@ function FindShortestPath(maze, N, M)
 	return S --Shortest Path
 end
 
-function adjacencyMatrix(maze, N, M)
-	mt = {};
-	for i=1, N-1 do
-		for j=1, M-1 do
+function adjacencyMatrix()
+	
+	for i=min_x, max_x-1 do
+		for j=min_z, max_z-1 do
 			currValue = maze[i][j]
 			if currValue ~= 0 then
 				--Determine if Node Adjacent East of Current
 				eastValue = maze[i+1][j]
+				print(currValue);
 				if eastValue ~= 0 then
+					print(eastValue);
 					mt[currValue][eastValue] = 1
 					mt[eastValue][currValue] = 1
 				end
 				--Determine if Node Adjacent South of Current
 				southValue = maze[i][j+1]
 				if southValue ~= 0 then
+					print(southValue);
                     mt[currValue][southValue] = 1
                     mt[southValue][currValue] = 1
                 end
             end
         end
     end
-	return mt
 end
 
 function Djikstra(mt)
@@ -250,11 +275,11 @@ function Djikstra(mt)
 	end
 end
 
-function print2DMaze(maze)
+function print2DMaze()
 	print("Original Maze:")
 	for i=min_x, max_x do
 	   for j=min_z, max_z do
-		   io.write(string.format("%3d", maze[i][j]))
+		   io.write(string.format("%1d", maze[i][j]))
 	   end
 	   print()
 	end
@@ -262,8 +287,8 @@ end
 
 function printAdjacencyMatrix(mt)
 	print("\nAdjacency Matrix:")
-	for i=1, numNodes do
-	   for j=1, numNodes do
+	for i=1, numNodes-1 do
+	   for j=1, numNodes-1 do
 		   io.write(string.format("%2d", mt[i][j]))
 	   end
 	   print()
