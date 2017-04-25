@@ -57,7 +57,7 @@ function main()
 			--Perform Dijkstra Search on that maze and return the Shortest Path Known --
 			FindShortestPath()
 		else
-			print("Robot Could not Find End, Exiting...")
+			--print("Robot Could not Find End, Exiting...")
 		end
 		
 		-- Perform FSM Traversal back to start and then backtrace to goal
@@ -67,12 +67,12 @@ end
 -- Turning Helper Functions --
 function turnLeft()
 	turtle.turnLeft();
-	orientation = (orientation - 1) % 4;
+	orientation = (orientation + 1) % 4;
 end
  
 function turnRight()
 	turtle.turnRight();
-	orientation = (orientation + 1) % 4;
+	orientation = (orientation - 1) % 4;
 end
 
 function forward()
@@ -98,13 +98,13 @@ function forward()
 			max_z = current_z
 		end
 	end
-	print(current_x, current_z)
+	--print(current_x, current_z)
 end
 
 function MapWall()
 	if orientation == 0 then -- -x orientation
 		insert((current_x - 1), (current_z), 0)
-		if current_x -1 < min_x then 
+		if current_x - 1 < min_x then 
 			min_x = current_x - 1
 		end
 	elseif orientation == 1 then -- -z orientation
@@ -159,16 +159,16 @@ function FindEnd()
 		-- State: Turn to Opening
 		turnLeft()
 		-- State: Observe
-		insert(current_x, current_z, numNodes + 1)
-		numNodes = numNodes + 1
+		--insert(current_x, current_z, numNodes + 1)
+		--numNodes = numNodes + 1
 		
 		while turtle.detect() do
 			 -- Map the block on array map --
 			MapWall()
 			  
-			  -- State: Turn to Opening
-			  turnRight()
-			  -- State: Observe
+			-- State: Turn to Opening
+			turnRight()
+			-- State: Observe
 		end
     -- State: Move
     forward()
@@ -196,13 +196,15 @@ function FindShortestPath()
 	print2DMaze()
 	
 	adjacencyMatrix()
-	printAdjacencyMatrix()
+	--printAdjacencyMatrix()
 	
 	Djikstra()
 	
 	u = target
 
 	--Construct Path To Goal
+	shortest_path = {} --Reset shortest Path
+	path_length = 1 --Reset path length
 	while prev[u] ~= nil do
 		path_length = path_length + 1;
 		table.insert(shortest_path, 1, u)
@@ -214,7 +216,7 @@ function FindShortestPath()
 end
 
 function adjacencyMatrix()
-	
+	mt = {} --Reset Matrix!
 	-- Fill matrix with defaults --
     for i=1, numNodes do
 		mt[i] = {} -- create a new row
@@ -223,22 +225,28 @@ function adjacencyMatrix()
 		end
     end
 	
-	for i=min_x, max_x-1 do
-		for j=min_z, max_z-1 do
+	for i=min_x, max_x  do
+		for j=min_z, max_z do
 			currValue = maze[i][j]
-			if currValue ~= 0 then
-				--Determine if Node Adjacent East of Current
-				eastValue = maze[i+1][j]
-				if eastValue ~= 0 then
-					mt[currValue][eastValue] = 1
-					mt[eastValue][currValue] = 1
+			if currValue > 0 then
+					
+				if i < max_x then --Make Sure We arent at end
+					--Determine if Node Adjacent East of Current
+					eastValue = maze[i+1][j] 
+					if eastValue > 0 then
+						mt[currValue][eastValue] = 1
+						mt[eastValue][currValue] = 1
+					end
 				end
-				--Determine if Node Adjacent South of Current
-				southValue = maze[i][j+1]
-				if southValue ~= 0 then
-                    mt[currValue][southValue] = 1
-                    mt[southValue][currValue] = 1
-                end
+				
+				if j < max_z then  -- Make Sure We arent at end
+					--Determine if Node Adjacent South of Current
+					southValue = maze[i][j+1]
+					if southValue > 0 then
+						mt[currValue][southValue] = 1
+						mt[southValue][currValue] = 1
+					end
+				end
             end
         end
     end
@@ -280,7 +288,7 @@ function Djikstra()
 		Qsize = Qsize - 1
 
 		if (u == target) then
-			print("Dijkstra Found Goal Node");
+			--print("Dijkstra Found Goal Node");
 			break
 		end
 
@@ -290,7 +298,6 @@ function Djikstra()
 				if alt < dist[v] then
 					dist[v] = alt
 					prev[v] = u
-					print(prev[v])
 				end
 			end
 		end
@@ -301,15 +308,19 @@ function print2DMaze()
 	print("Original Maze:")
 	for i=min_x, max_x do
 	   for j=min_z, max_z do
-			if maze[i][j] > 0 then
-				io.write("0")
+			
+			if i == end_x and j == end_z then
+				io.write("G")
+			elseif i == 0 and j == 0 then
+				io.write("S")
 			else
-				io.write("1")
+				io.write(maze[i][j])
 			end
 	   end
 	   print()
 	end
 end
+
 
 function printAdjacencyMatrix()
 	print("\nAdjacency Matrix:")
@@ -348,32 +359,33 @@ function DoTraversal()
 		FindShortestPath()
 		recalc = StartToEnd()
 	end
-	print("We Made it! WOO!")
+	--print("")
 	shell.run("dance")
 end
 
 function BackToStart()
     -- follow known path(option 1) --
-	local steps = path_length-1
+	local steps = GetStepFromNode()-1
 	local recalc = false
 	
 	while steps > 0 and not recalc do
 		local node = shortest_path[steps]
 		
-		if node == maze[current_x-1][current_z] then -- -x orientation
+		if current_x-1 >= min_x and node == maze[current_x-1][current_z] then -- -x orientation
 			TurnTo(0) --Turns to 0 Direction in least steps possible
-		elseif node == maze[current_x][current_z-1] then -- -z orientation
+		elseif current_z-1 >= min_z and node == maze[current_x][current_z-1] then -- -z orientation
 			TurnTo(1)
-		elseif node == maze[current_x+1][current_z] then -- +x orientation
+		elseif current_x+1 <= max_x and node == maze[current_x+1][current_z] then -- +x orientation
 			TurnTo(2)
-		elseif node == maze[current_x][current_z+1] then -- +z orientation
+		elseif current_z+1 <= max_z and node == maze[current_x][current_z+1] then -- +z orientation
 			TurnTo(3)
 		else
-			print("Back To Start: Our Dijkstra Algorithm is a Liar, Exiting...");
+			print("Back To Start: Our Dijkstra Algorithm is a Liar.")
 			break
 		end
 		
 		if turtle.detect() then
+			MapWall()
 			recalc = true
 		else
 			forward()
@@ -381,7 +393,7 @@ function BackToStart()
 		steps = steps - 1;
 	end
 	
-	return recalc;
+	return recalc
 end
 
 function StartToEnd()
@@ -389,23 +401,24 @@ function StartToEnd()
 	local steps = path_length-1
 	local recalc = false
 	
-	for i=2, path_length do
+	for i=GetStepFromNode()+1, path_length do
 		local node = shortest_path[i]
 		
-		if node == maze[current_x-1][current_z] then -- -x orientation
+		if current_x-1 >= min_x and node == maze[current_x-1][current_z] then -- -x orientation
 			TurnTo(0) --Turns to 0 Direction in least steps possible
-		elseif node == maze[current_x][current_z-1] then -- -z orientation
+		elseif current_z-1 >= min_z and node == maze[current_x][current_z-1] then -- -z orientation
 			TurnTo(1)
-		elseif node == maze[current_x+1][current_z] then -- +x orientation
+		elseif current_x+1 <= max_x and node == maze[current_x+1][current_z] then -- +x orientation
 			TurnTo(2)
-		elseif node == maze[current_x][current_z+1] then -- +z orientation
+		elseif current_z+1 <= max_z and node == maze[current_x][current_z+1] then -- +z orientation
 			TurnTo(3)
 		else
-			print("Start To End: Our Dijkstra Algorithm is a Liar, Exiting...");
+			print("Start To End: Our Dijkstra Algorithm is a Liar.")
 			break
 		end
 		
 		if turtle.detect() then
+			MapWall()
 			recalc = true
 		else
 			forward()
@@ -416,13 +429,20 @@ function StartToEnd()
 	return recalc;
 end
 
+function GetStepFromNode()
+	step = 0
+	for i=1, path_length do 
+		if maze[current_x][current_z] == shortest_path[i] then
+			step = i;
+			print(i)
+		end
+	end
+	return step
+end
+
 function TurnTo(direction)
 	while direction ~= orientation do
-		if direction - orientation > 0 then
-			turnRight()
-		else
-			turnLeft()
-		end
+		turnRight();
 	end
 end
 
