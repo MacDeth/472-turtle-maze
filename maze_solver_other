@@ -1,0 +1,437 @@
+-- Variables --
+arg = {...} -- Lua Command Line arguments
+rednet = ""
+maze = {}
+
+-- Turtle's Current Position --
+current_x = 0
+current_z = 0 -- We don't care about y in the orientation of this game
+
+-- Top Left Corner of Maze --
+min_x = 0;
+min_z = 0;
+
+-- Bottom Right Corner of Maze --
+max_x = 0;
+max_z = 0;  
+
+end_x = 0
+end_z = 0
+
+-- Turtle's Relative Orientation --
+orientation = 0 --0 = -x, 1 = -z, 2 = +x, 3 = +z
+
+-- Dijkstra Variables --
+numNodes = 0 --Number of Nodes Generated
+source = 0
+target = 0
+
+-- Main Function --
+function main()
+		-- Receive Argument Which states which Rednet Computer to Send To. --
+		local rednet = arg[1]
+		
+		-- Start FSM Machine which Searches for Goal Block via Left Hand Rule --
+		-- Retrieve Maze from End Finder 
+		local found = FindEnd()
+		
+		-- Fill In Gaps on Maze --
+		for i=min_x, max_x do
+			for j=min_z, max_z do
+				if maze[i] == nil then
+					maze[i] = {}
+				end
+				if maze[i][j] == nil then 
+					insert(i, j, numNodes + 1)
+					numNodes = numNodes + 1;
+				end
+			end
+		end
+		
+		
+		local S, length --Always start 1 even if starting node
+		if found then
+			--Perform Dijkstra Search on that maze and return the Shortest Path Known --
+			S, length = FindShortestPath()
+		else
+			print("Robot Could not Find End, Exiting...")
+		end
+		
+		-- Perform FSM Traversal back to start and then backtrace to goal
+		DoTraversal(S, length)
+end
+
+-- Turning Helper Functions --
+function turnLeft()
+	turtle.turnLeft();
+	orientation = (orientation - 1) % 4;
+end
+ 
+function turnRight()
+	turtle.turnRight();
+	orientation = (orientation + 1) % 4;
+end
+
+function forward()
+	turtle.forward()
+	if orientation == 0 then -- -x orientation
+		current_x = current_x - 1
+		if current_x < min_x then 
+			min_x = current_x
+		end
+	elseif orientation == 1 then -- -z orientation
+		current_z = current_z - 1
+		if current_z < min_z then 
+			min_z = current_z
+		end
+	elseif orientation == 2 then -- +x orientation
+		current_x = current_x + 1
+		if current_x > max_x then 
+			max_x = current_x
+		end
+	elseif orientation == 3 then -- +z orientation
+		current_z = current_z + 1
+		if current_z > max_z then 
+			max_z = current_z
+		end
+	end
+	print(current_x, current_z)
+end
+
+function MapWall()
+	if orientation == 0 then -- -x orientation
+		insert((current_x - 1), (current_z), 0)
+		if current_x -1 < min_x then 
+			min_x = current_x - 1
+		end
+	elseif orientation == 1 then -- -z orientation
+		insert((current_x), (current_z - 1), 0)
+		--maze[current_x][current_z - 1] = 1
+		if current_z - 1 < min_z then 
+			min_z = current_z - 1
+		end
+	elseif orientation == 2 then
+		insert((current_x + 1), (current_z), 0)
+		--maze[current_x +1][current_z] = 1 -- +x orientation
+		if current_x + 1 > max_x then 
+			max_x = current_x + 1
+		end
+	elseif orientation == 3 then
+		insert((current_x), (current_z + 1), 0)
+		--maze[current_x][current_z + 1] = 1 -- +z orientation
+		if current_z + 1 > max_z then 
+			max_z = current_z + 1
+		end
+	end
+end
+
+------------------------------
+-- FSM End Finder Functions --
+------------------------------
+
+local function IsEnd()
+
+	local success, data = turtle.inspectDown()
+	if success then
+		if data.metadata == 14 then return true end --Checks if ending block is Green.
+	end
+
+  return false
+end
+
+function FindEnd()
+	local ITERATION_MAX = 10000
+	local end_found = fal
+
+	local i = 0
+	while i < ITERATION_MAX do
+		
+		if IsEnd() then
+			-- State: End Found
+			end_x, end_z = current_x, current_z;
+			end_found = true
+			break
+		end
+
+		-- State: Turn to Opening
+		turnLeft()
+		-- State: Observe
+		
+		--These lines prevent fuck ups from occurring if we block it temporarily
+		--I havent written them correctly apparantly though...
+		--numNodes = numNodes + 1
+		--insert(current_x, current_z, numNodes)
+
+		
+		while turtle.detect() do
+			 -- Map the block on array map --
+			MapWall()
+			  
+			  -- State: Turn to Opening
+			  turnRight()
+			  -- State: Observe
+		end
+    -- State: Move
+    forward()
+    i = i + 1
+  end
+
+  return end_found
+end
+
+function insert(x, z, val)
+	if not maze[x] then
+		maze[x] = {}
+	end
+	maze[x][z] = val
+end
+
+
+------------------------------------
+-- Djikstra Pathfinding Functions --
+------------------------------------
+
+--Creates shortest path 
+function FindShortestPath()  
+	local S = {}
+	
+	print2DMaze()
+	
+	local mt = adjacencyMatrix()
+	local printAdjacencyMatrix(mt)
+	
+	local source = maze[0][0]
+	local target = maze[end_x][end_z]
+	prev, dist = Djikstra(mt, source, target)
+	
+	u = target
+	local path_length
+	--Construct Path To Goal
+	while prev[u] ~= nil do
+		path_length = path_length + 1;
+		table.insert(S, 1, u)
+		u = prev[u]
+	end
+	table.insert(S, 1, u) --Get final Num
+	
+	printShortestPath(S, path_length)
+	
+	return S, path_length
+end
+
+function adjacencyMatrix()
+	mt = {}
+	-- Fill matrix with defaults --
+    for i=1, numNodes do
+		mt[i] = {} -- create a new row
+		for j=1,numNodes do
+			mt[i][j] = 0
+		end
+    end
+	
+	for i=min_x, max_x-1 do
+		for j=min_z, max_z-1 do
+			currValue = maze[i][j]
+			if currValue ~= 0 then
+				--Determine if Node Adjacent East of Current
+				eastValue = maze[i+1][j]
+				if eastValue ~= 0 then
+					mt[currValue][eastValue] = 1
+					mt[eastValue][currValue] = 1
+				end
+				--Determine if Node Adjacent South of Current
+				southValue = maze[i][j+1]
+				if southValue ~= 0 then
+                    mt[currValue][southValue] = 1
+                    mt[southValue][currValue] = 1
+                end
+            end
+        end
+    end
+	return mt
+end
+
+function Djikstra(mt, source, target)
+
+	--Initialization
+	Q = {}
+	Qsize = 0
+	dist = {}
+	prev = {}
+	for v=1, numNodes do
+			dist[v] = math.huge --Unknown Distance from source to v
+			prev[v] = nil --Previous node in optimal path from source
+			Q[v] = true --All nodes initially in Q (unvisited nodes)
+			Qsize = Qsize + 1
+	end
+
+	dist[source] = 0 --Distance from source to source
+
+	while Qsize > 0 do --Iterate While Q not Empty
+		u = 0 --Instantiate u variable
+
+		--Node with least distance selected first
+		mindist = math.huge
+		for k, v in pairs(Q) do --Iterate through set
+			if v ~= nil then
+				if dist[k] <= mindist then
+						u = k
+						mindist = dist[k]
+				end
+			end
+		end
+
+		Q[u] = nil; --Remove u from set Q
+		Qsize = Qsize - 1
+
+		if (u == target) then
+			print("Dijkstra Found Goal Node");
+			break
+		end
+
+		for v in pairs(Q) do
+			if mt[u][v] == 1 then --For Each Neighbor
+				alt = dist[u] + 1 --Length from U to V is always 1
+				if alt < dist[v] then
+					dist[v] = alt
+					prev[v] = u
+					print(prev[v])
+				end
+			end
+		end
+	end
+	return dist, prev
+end
+
+function print2DMaze()
+	print("Original Maze:")
+	for i=min_x, max_x do
+	   for j=min_z, max_z do
+			if maze[i][j] > 0 then
+				io.write("0")
+			else
+				io.write("1")
+			end
+	   end
+	   print()
+	end
+end
+
+function printAdjacencyMatrix(mt)
+	print("\nAdjacency Matrix:")
+	for i=1, numNodes-1 do
+	   for j=1, numNodes-1 do
+		   io.write(mt[i][j])
+	   end
+	   print()
+	end
+end
+
+function printShortestPath(S, length)
+	print("\nDjikstra Path:")
+	--Print Path
+	for i = 1, length do
+		io.write(S[i])
+		if i ~= length then
+			io.write("->")
+		end
+	end
+end
+
+----------------------------
+-- Do Traversal Functions --
+----------------------------
+function DoTraversal(S, length)
+	--Move Back To Starting Location First
+	local recalc = BackToStart(S, length)
+	while recalc do
+		S, length = FindShortestPath()
+		recalc = BackToStart(S, length)
+	end
+	-- Perform Traversal Other Way After Corrections Are Made on Way back --
+	recalc = StartToEnd(S, length)
+	while recalc do
+		S, length = indShortestPath()
+		recalc = StartToEnd(S, length)
+	end
+	print("We Made it! WOO!")
+	shell.run("dance")
+end
+
+function BackToStart(S, length)
+    -- follow known path(option 1) --
+	local steps = length-1
+	local recalc = false
+	
+	while steps > 0 and not recalc do
+		local node = S[steps]
+		
+		if node == maze[current_x-1][current_z] then -- -x orientation
+			TurnTo(0) --Turns to 0 Direction in least steps possible
+		elseif node == maze[current_x][current_z-1] then -- -z orientation
+			TurnTo(1)
+		elseif node == maze[current_x+1][current_z] then -- +x orientation
+			TurnTo(2)
+		elseif node == maze[current_x][current_z+1] then -- +z orientation
+			TurnTo(3)
+		else
+			print("Back To Start: Our Dijkstra Algorithm is a Liar, Exiting...");
+			break
+		end
+		
+		if turtle.detect() then
+			recalc = true
+		else
+			forward()
+		end
+		steps = steps - 1;
+	end
+	
+	return recalc;
+end
+
+function StartToEnd(S, length)
+    -- follow known path(option 1) --
+	local recalc = false
+	
+	for i=2, length do
+		local node = S[i]
+		
+		if node == maze[current_x-1][current_z] then -- -x orientation
+			TurnTo(0) --Turns to 0 Direction in least steps possible
+		elseif node == maze[current_x][current_z-1] then -- -z orientation
+			TurnTo(1)
+		elseif node == maze[current_x+1][current_z] then -- +x orientation
+			TurnTo(2)
+		elseif node == maze[current_x][current_z+1] then -- +z orientation
+			TurnTo(3)
+		else
+			print("Start To End: Our Dijkstra Algorithm is a Liar, Exiting...");
+			break
+		end
+		
+		if turtle.detect() then
+			recalc = true
+		else
+			forward()
+		end
+		steps = steps - 1;
+	end
+	
+	return recalc;
+end
+
+function TurnTo(direction)
+	while direction ~= orientation do
+		if direction - orientation > 0 then
+			turnRight()
+		else
+			turnLeft()
+		end
+	end
+end
+
+
+
+-- Start Main Function --
+main()
