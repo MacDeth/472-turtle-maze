@@ -3,6 +3,15 @@ arg = {...} -- Lua Command Line arguments
 rednet = ""
 maze = {}
 
+
+start_x = 0
+start_z = 0
+
+-- Current Position we are calculating Dijkstra
+calc_x = 0
+calc_z = 0
+
+
 -- Turtle's Current Position --
 current_x = 0
 current_z = 0 -- We don't care about y in the orientation of this game
@@ -41,20 +50,11 @@ function main()
 		found = FindEnd()
 		
 		-- Fill In Gaps on Maze --
-		for i=min_x, max_x do
-			for j=min_z, max_z do
-				if maze[i] == nil then
-					maze[i] = {}
-				end
-				if maze[i][j] == nil then 
-					insert(i, j, numNodes + 1)
-					numNodes = numNodes + 1;
-				end
-			end
-		end
 		
 		if found then
 			--Perform Dijkstra Search on that maze and return the Shortest Path Known --
+			calc_x = start_x
+			calc_z = start_z
 			FindShortestPath()
 		else
 			--print("Robot Could not Find End, Exiting...")
@@ -193,6 +193,20 @@ end
 --Creates shortest path 
 function FindShortestPath()  
 	
+	-- Make Sure Maze is full of Nodes --
+	for i=min_x, max_x do
+		for j=min_z, max_z do
+			if maze[i] == nil then
+				maze[i] = {}
+			end
+			if maze[i][j] == nil then 
+				insert(i, j, numNodes + 1)
+				numNodes = numNodes + 1
+			end
+		end
+	end
+	
+	
 	print2DMaze()
 	
 	adjacencyMatrix()
@@ -259,8 +273,8 @@ function Djikstra()
 	Qsize = 0
 	dist = {}
 	prev = {}
-	source = maze[0][0]
-	target = maze[end_x][end_z]
+	source = maze[current_x][current_z]
+	target = maze[calc_x][calc_z]
 	for v=1, numNodes do
 			dist[v] = math.huge --Unknown Distance from source to v
 			prev[v] = nil --Previous node in optimal path from source
@@ -348,29 +362,32 @@ end
 ----------------------------
 function DoTraversal()
 	--Move Back To Starting Location First
-	local recalc = BackToStart()
+	local recalc = TraversePath()
 	while recalc do
 		FindShortestPath()
-		recalc = BackToStart()
+		recalc = TraversePath()
 	end
 	-- Perform Traversal Other Way After Corrections Are Made on Way back --
-	recalc = StartToEnd()
+	calc_x = end_x
+	calc_z = end_z
+	FindShortestPath()
+	recalc = TraversePath()
 	while recalc do
 		FindShortestPath()
-		recalc = StartToEnd()
+		recalc = TraversePath()
 	end
 	--print("")
 	shell.run("dance")
 end
 
-function BackToStart()
+--[[function BackToStart()
     -- follow known path(option 1) --
 	local steps = GetStepFromNode()-1
 	local recalc = false
 	
 	while steps > 0 and not recalc do
 		local node = shortest_path[steps]
-		
+
 		if current_x-1 >= min_x and node == maze[current_x-1][current_z] then -- -x orientation
 			TurnTo(0) --Turns to 0 Direction in least steps possible
 		elseif current_z-1 >= min_z and node == maze[current_x][current_z-1] then -- -z orientation
@@ -394,9 +411,9 @@ function BackToStart()
 	end
 	
 	return recalc
-end
+end--]]
 
-function StartToEnd()
+function TraversePath()
     -- follow known path(option 1) --
 	local steps = path_length-1
 	local recalc = false
@@ -434,7 +451,7 @@ function GetStepFromNode()
 	for i=1, path_length do 
 		if maze[current_x][current_z] == shortest_path[i] then
 			step = i;
-			print(i)
+			print(step)
 		end
 	end
 	return step
