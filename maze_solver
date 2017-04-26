@@ -1,7 +1,9 @@
 -- Variables --
 arg = {...} -- Lua Command Line arguments
-rednet = ""
+rednet_id = 0
+r_enabled = 0
 maze = {}
+state = ""
 
 
 start_x = 0
@@ -43,24 +45,29 @@ target = 0
 -- Main Function --
 function main()
 		-- Receive Argument Which states which Rednet Computer to Send To. --
-		rednet = arg[1]
-		
+		rednet_id = tonumber(arg[1])
+		r_enabled = arg[2]
+		print(rednet_id)
 		-- Start FSM Machine which Searches for Goal Block via Left Hand Rule --
 		-- Retrieve Maze from End Finder 
+		state = "Find End"
 		found = FindEnd()
 		
 		-- Fill In Gaps on Maze --
 		
 		if found then
+			state = "Calculating Shortest Path"
 			--Perform Dijkstra Search on that maze and return the Shortest Path Known --
 			calc_x = start_x
 			calc_z = start_z
 			FindShortestPath()
 		else
-			--print("Robot Could not Find End, Exiting...")
+			print("Robot Could not Find End, Exiting...")
 		end
 		
 		-- Perform FSM Traversal back to start and then backtrace to goal
+		state = "Traversing Path"
+		state = "Traversing Path"
 		DoTraversal()
 end
 
@@ -126,6 +133,7 @@ function MapWall()
 			max_z = current_z + 1
 		end
 	end
+	UpdateRedNet()
 end
 
 ------------------------------
@@ -205,7 +213,7 @@ function FindShortestPath()
 			end
 		end
 	end
-	
+	UpdateRedNet()
 	
 	print2DMaze()
 	
@@ -373,45 +381,14 @@ function DoTraversal()
 	FindShortestPath()
 	recalc = TraversePath()
 	while recalc do
+		state = "Recalculating Path"
 		FindShortestPath()
+		state = "Traversing Path"
 		recalc = TraversePath()
 	end
 	--print("")
 	shell.run("dance")
 end
-
---[[function BackToStart()
-    -- follow known path(option 1) --
-	local steps = GetStepFromNode()-1
-	local recalc = false
-	
-	while steps > 0 and not recalc do
-		local node = shortest_path[steps]
-
-		if current_x-1 >= min_x and node == maze[current_x-1][current_z] then -- -x orientation
-			TurnTo(0) --Turns to 0 Direction in least steps possible
-		elseif current_z-1 >= min_z and node == maze[current_x][current_z-1] then -- -z orientation
-			TurnTo(1)
-		elseif current_x+1 <= max_x and node == maze[current_x+1][current_z] then -- +x orientation
-			TurnTo(2)
-		elseif current_z+1 <= max_z and node == maze[current_x][current_z+1] then -- +z orientation
-			TurnTo(3)
-		else
-			print("Back To Start: Our Dijkstra Algorithm is a Liar.")
-			break
-		end
-		
-		if turtle.detect() then
-			MapWall()
-			recalc = true
-		else
-			forward()
-		end
-		steps = steps - 1;
-	end
-	
-	return recalc
-end--]]
 
 function TraversePath()
     -- follow known path(option 1) --
@@ -460,6 +437,39 @@ end
 function TurnTo(direction)
 	while direction ~= orientation do
 		turnRight();
+	end
+end
+
+
+function UpdateRedNet()
+	if r_enabled then
+		print("Rednet opening on left: " .. rednet_id)
+		rednet.open("left")
+		local label = os.getComputerLabel()
+		local rows = max_x - min_x
+		local columns = max_z - min_z
+		local mazeString = ""
+		for i=min_x, max_x do
+			for j=min_z, max_z do
+				if maze[i] then
+					if maze[i][j] then
+						if maze[i][j] > 0 then
+							mazeString = mazeString .. "1"
+						else
+							mazeString = 0
+						end
+					else
+						mazeString = mazeString .. "1"
+					end
+				end
+			end
+		end
+		rednet.send(rednet_id, label)
+		rednet.send(rednet_id, state)
+		rednet.send(rednet_id, tostring(rows))
+		rednet.send(rednet_id, tostring(columns))
+		rednet.send(rednet_id, mazeString)
+		rednet.close("left")
 	end
 end
 

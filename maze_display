@@ -1,15 +1,28 @@
 -- open rednet
 rednet.open("left")
 
+-- Open Monitor On Right
+local monitor = peripheral.wrap( "right" )
+
 --listen for state and map updates
 --listen for exit state to end infinite display loop
+--Send name of robot
 while(true) do
+	monitor.setCursorPos(1,1)
+	
+	senderID, robotName = rednet.receive()
+	monitor.clear() --Clear Old State
+	monitor.write("Current robot: " .. robotName)
+    oldx, oldy = monitor.getCursorPos()
+	monitor.setCursorPos(1,oldy+1)
+    --Send current state of the robot
     senderID, state = rednet.receive()
     if state == "exit" then 
         break 
     end
-    io.write("Current state: ", state)
-    io.write("\n")
+    monitor.write("Current state: " .. state)
+    oldx, oldy = monitor.getCursorPos()
+	monitor.setCursorPos(1,oldy+1)
     --listen for the row and column length
     senderID, rowsString = rednet.receive()
     senderID, columnsString = rednet.receive()
@@ -18,13 +31,15 @@ while(true) do
     --listen for string of map and print it in an array format
     senderID, mapString = rednet.receive()
     count = 1
-    io.write("Current map known by the AI robot: ")
-    io.write("\n")
+    monitor.write("Current map known by the AI robot: ")
+	oldx, oldy = monitor.getCursorPos()
+	monitor.setCursorPos(1,oldy+1)
     for i = 1, rows do
         for j = 1, columns do
-            io.write(string.sub(mapString, count, count))
+            monitor.write(string.sub(mapString, count, count))
             count = count + 2
         end
-        io.write("\n")
+        oldx, oldy = monitor.getCursorPos()
+		monitor.setCursorPos(1,oldy+1)
     end
 end
