@@ -67,7 +67,6 @@ function main()
 		
 		-- Perform FSM Traversal back to start and then backtrace to goal
 		state = "Traversing Path"
-		state = "Traversing Path"
 		DoTraversal()
 end
 
@@ -387,6 +386,8 @@ function DoTraversal()
 		recalc = TraversePath()
 	end
 	--print("")
+	state = "Found Goal -- DANCE!"
+	UpdateRedNet()
 	shell.run("dance")
 end
 
@@ -451,16 +452,16 @@ function UpdateRedNet()
 		local mazeString = ""
 		for i=min_x, max_x do
 			for j=min_z, max_z do
-				if maze[i] then
-					if maze[i][j] then
-						if maze[i][j] > 0 then
-							mazeString = mazeString .. "1"
-						else
-							mazeString = 0
-						end
-					else
+				if maze[i] ~= nil then
+					if maze[i][j] == nil then
 						mazeString = mazeString .. "1"
+					elseif maze[i][j] > 0 then
+						mazeString = mazeString .. "1"
+					else
+						mazeString = mazeString .. "0"
 					end
+				else
+					mazeString = mazeString .. "1"
 				end
 			end
 		end
